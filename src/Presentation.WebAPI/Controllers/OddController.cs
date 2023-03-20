@@ -19,6 +19,7 @@ namespace GameCollector.Presentation.WebAPI.Controllers
     using GameCollector.Presentation.WebAPI.Dtos.Output.Competition;
     using GameCollector.Presentation.WebAPI.Queries.Competition.GetByOddIdQuery;
     using GameCollector.Presentation.WebAPI.Queries.Competition.GetOddsByGameIdQuery;
+    using GameCollector.Presentation.WebAPI.Queries.Competition.GetOddsByValueQuery;
     using GameCollector.Presentation.WebAPI.Utils;
     using MediatR;
     using Microsoft.AspNetCore.Mvc;
@@ -52,6 +53,47 @@ namespace GameCollector.Presentation.WebAPI.Controllers
         {
             this.mediator = mediator;
             this.mapper = mapper;
+        }
+
+        [HttpPost]
+        [ProducesResponseType(typeof(OddDetailsDto), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorMessage), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorMessage), (int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> CreateOddAsync(
+                    [FromQuery] GetByGameIdDto filters,
+                    [FromBody] CreateOddDto createOddDto,
+                    CancellationToken cancellationToken)
+        {
+            Odd odd = await this.mediator.Send(new CreateOddCommand
+            {
+                GameId = filters.GameId,
+                BookmakerId = createOddDto.BookmakerId,
+                TeamId = createOddDto.TeamId,
+                Value = createOddDto.Value,
+                Type = createOddDto.Type,
+            }, cancellationToken);
+
+            return this.Ok(this.mapper.Map<OddDetailsDto>(odd));
+        }
+
+        /// <summary>
+        /// Deletes the odd asynchronous.
+        /// </summary>
+        /// <param name="filter">The filter.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns></returns>
+        [HttpDelete("{OddId}")]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ErrorMessage), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorMessage), (int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> DeleteOddAsync([FromRoute] GetByOddIdDto filter, CancellationToken cancellationToken)
+        {
+            await this.mediator.Publish(new DeleteOddCommand
+            {
+                OddId = filter.OddId
+            }, cancellationToken);
+
+            return this.Ok();
         }
 
         /// <summary>
@@ -94,64 +136,34 @@ namespace GameCollector.Presentation.WebAPI.Controllers
             return this.Ok(this.mapper.Map<OddDetailsDto>(odd));
         }
 
-        [HttpPost]
-        [ProducesResponseType(typeof(OddDetailsDto), (int)HttpStatusCode.OK)]
+        [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<OddDto>), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorMessage), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(ErrorMessage), (int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> CreateOddAsync(
-            [FromQuery] GetByGameIdDto filters, 
-            [FromBody] CreateOddDto createOddDto, 
-            CancellationToken cancellationToken)
+        public async Task<IActionResult> GetByValueAsync([FromQuery] GetByOddValueDto filters, CancellationToken cancellationToken)
         {
-            Odd odd = await this.mediator.Send(new CreateOddCommand
+            IEnumerable<Odd> odd = await this.mediator.Send(new GetOddsByValueQuery
             {
-                GameId = filters.GameId,
-                BookmakerId = createOddDto.BookmakerId,
-                TeamId = createOddDto.TeamId,
-                Value = createOddDto.Value,
-                Type = createOddDto.Type,
-
+                Value = filters.Value
             }, cancellationToken);
 
-            return this.Ok(this.mapper.Map<OddDetailsDto>(odd));
-
+            return this.Ok(this.mapper.Map<IEnumerable<OddDto>>(odd));
         }
-
-        /// <summary>
-        /// Deletes the odd asynchronous.
-        /// </summary>
-        /// <param name="filter">The filter.</param>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <returns></returns>
-        [HttpDelete("{OddId}")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType(typeof(ErrorMessage), (int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType(typeof(ErrorMessage), (int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> DeleteOddAsync([FromRoute] GetByOddIdDto filter, CancellationToken cancellationToken)
-        {
-            await this.mediator.Publish(new DeleteOddCommand
-            {
-                OddId = filter.OddId
-            }, cancellationToken);
-
-            return this.Ok();
-        }
-
 
         [HttpPut("{OddId}")]
         [ProducesResponseType(typeof(OddDetailsDto), (int)HttpStatusCode.OK)]
-        [ProducesResponseType(typeof(ErrorMessage),(int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ErrorMessage), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(ErrorMessage), (int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> UpdateOddAsync(
-            [FromRoute] GetByOddIdDto filters, 
-            [FromBody] UpdateOddDto updateOddDto, 
+            [FromRoute] GetByOddIdDto filters,
+            [FromBody] UpdateOddDto updateOddDto,
             CancellationToken cancellationToken)
         {
             Odd odd = await this.mediator.Send(new UpdateOddCommand
             {
                 OddId = filters.OddId,
                 Value = updateOddDto.Value,
-            }, cancellationToken) ;
+            }, cancellationToken);
 
             return this.Ok(this.mapper.Map<OddDetailsDto>(odd));
         }
